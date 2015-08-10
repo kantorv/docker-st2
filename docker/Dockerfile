@@ -1,5 +1,5 @@
 # Pull base image.
-FROM ubuntu:14.04
+FROM ubuntu:14.04.2
 
 # Disable prompts
 ENV DEBIAN_FRONTEND noninteractive
@@ -7,13 +7,42 @@ ENV DEBIAN_FRONTEND noninteractive
 # Reset policy-rc.d
 RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
-# Install Python
-RUN \
-  apt-get update && \
-    apt-get install -y curl python python-dev python-pip python-virtualenv openssh-server && \
-      apt-get install -y python-prettytable python-yaml && \
-        rm -rf /var/lib/apt/lists/*
 
+# Set locale (fix the locale warnings)
+RUN locale-gen --purge en_US.UTF-8
+RUN echo  'LANG="en_US.UTF-8"' > /etc/default/locale
+RUN echo   'LANGUAGE="en_US:en"' >> /etc/default/locale
+
+# Set timezone
+RUN echo "Asia/Jerusalem"  > /etc/timezone
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+#remo
+RUN rm /etc/apt/sources.list
+ADD sources.local.list /etc/apt/sources.list
+#RUN   echo "192.115.211.70       ubuntu.mirror" >> /etc/hosts
+#192.115.211.70 ubuntu.mirror
+#echo "10.0.0.22       ubuntu.mirror"
+
+
+
+
+# Install Python
+RUN apt-get update -y
+
+RUN apt-get install -y \
+		curl python python-dev python-pip python-virtualenv supervisor build-essential openssh-server \
+		python-prettytable python-yaml 
+
+
+
+#RABBITMQ
+RUN echo "deb http://www.rabbitmq.com/debian/ testing main" >> /etc/apt/sources.list
+ADD rabbitmq-signing-key-public.asc rabbitmq-signing-key-public.asc
+RUN apt-key add rabbitmq-signing-key-public.asc
+RUN apt-get install -y rabbitmq-server
+
+# rm -rf /var/lib/apt/lists/*
 # Set environment variable to Docker
 ENV CONTAINER DOCKER
 

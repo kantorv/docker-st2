@@ -1,0 +1,1 @@
+cd docker && sudo docker build $@ -t lalala/st2 .
