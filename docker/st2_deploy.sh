@@ -20,18 +20,8 @@ else
 fi
 
 DEBTEST=`lsb_release -a 2> /dev/null | grep Distributor | awk '{print $3}'`
-RHTEST=`cat /etc/redhat-release 2> /dev/null | sed -e "s~\(.*\)release.*~\1~g"`
-
-if [[ -n "$DEBTEST" ]]; then
-  TYPE="debs"
-  echo "# Detected Distro is ${DEBTEST}"
-elif [[ -n "$RHTEST" ]]; then
-  TYPE="rpms"
-  echo "# Detected Distro is ${RHTEST}"
-else
-  echo "Unknown Operating System"
-  exit 2
-fi
+echo "VERSION:$ST2VER"
+TYPE="debs"
 
 ST2DEPLOY="${BASE_URL}/${ST2VER}/${TYPE}/st2_deploy.sh"
 CURLTEST=`curl --output /dev/null --silent --head --fail ${ST2DEPLOY}`

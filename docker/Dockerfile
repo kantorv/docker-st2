@@ -19,7 +19,7 @@ RUN dpkg-reconfigure --frontend noninteractive tzdata
 
 #remo
 RUN rm /etc/apt/sources.list
-ADD sources.local.list /etc/apt/sources.list
+ADD sources.il.list /etc/apt/sources.list
 #RUN   echo "192.115.211.70       ubuntu.mirror" >> /etc/hosts
 #192.115.211.70 ubuntu.mirror
 #echo "10.0.0.22       ubuntu.mirror"
@@ -40,21 +40,57 @@ RUN apt-get install -y \
 RUN echo "deb http://www.rabbitmq.com/debian/ testing main" >> /etc/apt/sources.list
 ADD rabbitmq-signing-key-public.asc rabbitmq-signing-key-public.asc
 RUN apt-key add rabbitmq-signing-key-public.asc
-RUN apt-get install -y rabbitmq-server
+RUN apt-get update -y && apt-get install -y rabbitmq-server
+ 
+RUN apt-get install -y   make python-virtualenv python-dev realpath mongodb mongodb-server gcc git libssl-dev libyaml-dev libffi-dev libxml2-dev libxslt1-dev postgresql postgresql-contrib libpq-dev
+ 
+
+#RUN git clone https://github.com/stackforge/python-mistralclient.git && \
+#	cd python-mistralclient && \
+#	pip install -e .
+
+ADD requirements.txt  requirements.txt
+ADD requirements.txt  st2client.requirements.txt
+RUN pip install -r requirements.txt
+RUN pip install -r st2client.requirements.txt
+
+ADD packages /packages 
+
+
+RUN cd /packages  && ls -al && echo "custom packages installation directory"
+RUN cd /packages/fabric-stanley-patched && python setup.py install
+RUN cd /packages/python-mistralclient-st2-0.9.0 && python setup.py install
+
+RUN apt-get install -y  python-dateutil python-jsonpath-rw
+RUN cd /packages &&  dpkg  -i *.deb
+RUN apt-get -y install gdebi-core &&  \
+    gdebi --n /packages/st2client_0.12.1-5_amd64.deb
+	
+
 
 # rm -rf /var/lib/apt/lists/*
 # Set environment variable to Docker
 ENV CONTAINER DOCKER
 
-RUN cd /root && curl -sS -k -O https://ops.stackstorm.net/releases/st2/scripts/st2_deploy.sh
 
-RUN bash -c 'chmod +x /root/st2_deploy.sh'
 
-RUN bash -c '/root/st2_deploy.sh stable || exit 2'
+
+RUN rabbitmq-plugins enable rabbitmq_management && \
+	service rabbitmq-server restart && \
+	rabbitmqctl status && \
+	curl -sS -o /usr/bin/rabbitmqadmin http://127.0.0.1:15672/cli/rabbitmqadmin && \
+	chmod 755 /usr/bin/rabbitmqadmin
+
+
+
+ADD  st2_deploy.main.sh /root/st2_deploy.main.sh
+
+RUN bash -c 'chmod +x /root/st2_deploy.main.sh'
+#RUN bash -c '/root/st2_deploy.main.sh stable'
 
 ADD . /root/st2/
 
-RUN bash -c 'chmod +x /root/st2/start.sh'
+#RUN bash -c 'chmod +x /root/st2/start.sh'
 
 # auth service
 EXPOSE 9100
