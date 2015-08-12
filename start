@@ -39,9 +39,10 @@ ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP  /bin/bash /r
 
 if [ -d  $POSTGRES_DIR/data/main ]; then
 	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP  'supervisorctl start postgres'
-	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP '/bin/bash /root/configure_st2client_libs.sh'
+
 else
 	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP '/bin/bash /root/init_postgres.sh'
+	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP '/bin/bash /root/configure_st2client_libs.sh'
 fi
 
 

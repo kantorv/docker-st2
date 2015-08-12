@@ -148,4 +148,4 @@ setup_auth
 install_st2client
 install_webui
 #migrate_rules
-register_content
+#register_content
