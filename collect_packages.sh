@@ -3,6 +3,10 @@
 source_dir="./packages" 
 dest_dir="./docker/packages"
 
+#URL=${DOWNLOAD_SERVER}/releases/st2/${STABLE}/${TYPE}/current/VERSION.txt
+#RELEASE=$(curl -sS -k -f "$URL")
+
+
 
 function join { local IFS="$1"; shift; echo "$*"; }
 
@@ -83,6 +87,23 @@ git clone --depth 1 -b $MISTRALCLIENT_GIT_BRANCH  $MISTRALCLIENT_GIT_URL $MISTRA
 
 
 
+
+
+
+LOGSHIPPER_URL=https://github.com/Kami/logshipper/archive/stackstorm_patched.zip
+LOGSHIPPER_GIT_URL=https://github.com/Kami/logshipper.git
+LOGSHIPPER_GIT_BRANCH=stackstorm_patched
+LOGSHIPPERT_FOLDER=logshipper
+
+[[ ! -d $LOGSHIPPERT_FOLDER  ]] && echo "cloning $LOGSHIPPER_GIT_BRANCH@$LOGSHIPPER_GIT_BRANCH" && \
+git clone --depth 1 -b $LOGSHIPPER_GIT_BRANCH  $LOGSHIPPER_GIT_URL $LOGSHIPPERT_FOLDER &&\
+   echo "$LOGSHIPPERT_FOLDER cloned" \
+|| echo "$LOGSHIPPERT_FOLDER exists"
+
+
+
+
+
 ST2_CLI_PACKAGE="st2client"
 ST2_PACKAGES="st2common st2reactor st2actions st2api st2auth st2debug"
 ST2_DOWNLOAD_SERVER="https://downloads.stackstorm.net"
@@ -94,9 +115,7 @@ ST2_RELEASE=5
 echo "ST2_URL:$ST2_URL"
 
 
-
-
-download_pkgs() {
+download_st2_pkgs() {
   echo "###########################################################################################"
   echo "# Downloading ubuntu packages"
   echo "ST2_PACKAGES: ${ST2_PACKAGES}"
@@ -123,12 +142,21 @@ download_pkgs() {
   #echo "PACKAGE_LIST:$PACKAGE_LIST" |  xargs  -n 1 -I FILE curl -sS -k -O "FILE"
 }
 
-download_pkgs
-
-#download_pkgs
 
 
+WEBUI_URL="https://downloads.stackstorm.net/releases/st2/$ST2_VER/webui/webui-$ST2_VER.tar.gz"
 
+download_webui() {
+  [[  -f webui-$ST2_VER.tar.gz  ]]	&& echo "webui-$ST2_VER.tar.gz  exists" || axel -n 3 -a  $WEBUI_URL
+}
+
+
+
+
+download_st2_pkgs
+download_webui
+
+ 
 #git clone --depth 1 -b st2-0.9.0  https://github.com/StackStorm/python-mistralclient.git python-mistralclient-st2-0.9.0
 cd ..
 

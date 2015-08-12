@@ -49,9 +49,17 @@ RUN apt-get install -y   make python-virtualenv python-dev realpath mongodb mong
 #	cd python-mistralclient && \
 #	pip install -e .
 
-ADD requirements.txt  requirements.txt
+ADD requirements1.txt requirements1.txt
+ADD requirements2.txt requirements2.txt
+ADD requirements3.txt requirements3.txt
+#ADD requirements4.txt requirements4.txt
+
+RUN pip install -r requirements1.txt
+RUN pip install -r requirements2.txt
+RUN pip install -r requirements3.txt
+
+
 ADD requirements.txt  st2client.requirements.txt
-RUN pip install -r requirements.txt
 RUN pip install -r st2client.requirements.txt
 
 ADD packages /packages 
@@ -60,12 +68,15 @@ ADD packages /packages
 RUN cd /packages  && ls -al && echo "custom packages installation directory"
 RUN cd /packages/fabric-stanley-patched && python setup.py install
 RUN cd /packages/python-mistralclient-st2-0.9.0 && python setup.py install
+RUN cd /packages/logshipper && python setup.py install
 
-RUN apt-get install -y  python-dateutil python-jsonpath-rw
+
+RUN apt-get install -y  python-dateutil python-jsonpath-rw  gdebi-core
 RUN cd /packages &&  dpkg  -i *.deb
-RUN apt-get -y install gdebi-core &&  \
-    gdebi --n /packages/st2client_0.12.1-5_amd64.deb
-	
+RUN gdebi --n /packages/st2client_0.12.1-5_amd64.deb
+
+ADD configure_st2client_libs.sh /configure_st2client_libs.sh
+RUN bash /configure_st2client_libs.sh  
 
 
 # rm -rf /var/lib/apt/lists/*
@@ -83,14 +94,49 @@ RUN rabbitmq-plugins enable rabbitmq_management && \
 
 
 
+
+
+
+
 ADD  st2_deploy.main.sh /root/st2_deploy.main.sh
-
 RUN bash -c 'chmod +x /root/st2_deploy.main.sh'
-#RUN bash -c '/root/st2_deploy.main.sh stable'
+RUN bash -c '/root/st2_deploy.main.sh stable'
 
-ADD . /root/st2/
 
-#RUN bash -c 'chmod +x /root/st2/start.sh'
+RUN apt-get install -y mongodb mongodb-server
+
+ADD configure_st2client_libs.sh /root/configure_st2client_libs.sh
+RUN bash -c 'chmod +x /root/configure_st2client_libs.sh'
+#RUN bash -c '/root/configure_st2client_libs.sh'
+
+
+
+
+ADD tail_mongo.sh  /root/tail_mongo.sh
+RUN chmod +x /root/tail_mongo.sh
+
+
+
+############################## SSH ############################################################
+RUN  if [ ! -d /root/.ssh ];then  mkdir /root/.ssh; fi
+RUN if [ ! -d /var/run/sshd ]; then mkdir /var/run/sshd; fi
+
+ADD sshkey.pub /root/.ssh/authorized_keys
+RUN chown root:root /root/.ssh/authorized_keys
+RUN sed -i "s/UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config && sed -i "s/UsePAM.*/UsePAM no/g" /etc/ssh/sshd_config
+
+
+ADD run_postgresql.sh /root/run_postgresql.sh
+RUN chmod +x /root/run_postgresql.sh
+
+ADD init_postgres.sh /root/init_postgres.sh
+RUN chmod +x /root/init_postgres.sh
+
+
+#supervisor configs
+RUN mkdir -p /var/log/supervisor
+ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 
 # auth service
 EXPOSE 9100
@@ -98,3 +144,9 @@ EXPOSE 9100
 EXPOSE 9101
 # webui
 EXPOSE 8080
+
+# ssh
+EXPOSE  22
+
+CMD env | grep _ >> /etc/environment && /usr/bin/supervisord
+

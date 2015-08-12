@@ -139,3 +139,38 @@ setup_mistral() {
   pip install -q -U git+https://github.com/StackStorm/python-mistralclient.git@${MISTRAL_STABLE_BRANCH}
 }
 
+
+
+setup_mistral_st2_config()
+{
+  echo "" >> ${STANCONF}
+  echo "[mistral]" >> ${STANCONF}
+  echo "v2_base_url = http://127.0.0.1:8989/v2" >> ${STANCONF}
+}
+
+
+
+
+
+
+setup_cloudslang() {
+  echo "###########################################################################################"
+  echo "# Setting up CloudSlang"
+
+  cd /opt
+  if [ -d "/opt/cslang" ]; then
+    rm -rf /opt/cslang
+  fi
+
+  echo "Downloading CloudSlang CLI"
+  curl -Ss -Lk -o cslang-cli.zip ${CLOUDSLANG_ZIP_URL}
+
+  echo "Unzipping CloudSlang CLI"
+  unzip cslang-cli.zip
+
+  echo "Chmoding CloudSlang executables"
+  chmod +x ${CLOUDSLANG_EXEC_PATH}
+
+  echo "Deleting cslang-cli zip file"
+  rm cslang-cli.zip
+}

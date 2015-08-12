@@ -1,0 +1,48 @@
+#!/bin/bash
+sudo docker rm -f st2_cont  
+
+APP_ROOT=$(pwd)
+LOGS_ROOT=$APP_ROOT/log
+DB_DIR=$APP_ROOT/databases
+
+MOGNO_DIR=$DB_DIR/mongodb
+POSTGRES_DIR=$DB_DIR/postgres
+
+
+CONT_ID=`sudo docker run   -i -t -d \
+	-v $LOGS_ROOT/supervisor:/var/log/supervisor  \
+	-v $MOGNO_DIR/data/db:/mongodb/data/db \
+	-v $POSTGRES_DIR/data/:/data \
+	-p 27017:27017 \
+	-p 28017:28017 \
+	-p 9100:9100 \
+	-p 9101:9101 \
+	-p 8080:8080 \
+--name st2_cont lalala/st2:latest`
+
+
+CONT_IP=$(sudo docker inspect st2_cont | grep IPAddress | cut -d '"' -f 4)
+SSH_OPTS="-o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
+RET=1
+echo "connecting to st2 container..."
+until [ ${RET} -eq 0 ]; do
+    ssh  -t  $SSH_OPTS -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP 'supervisorctl status'
+    RET=$?
+    sleep 1
+done
+
+
+
+ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP  /bin/bash /root/tail_mongo.sh
+
+
+if [ -d  $POSTGRES_DIR/data/main ]; then
+	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP  'supervisorctl start postgres'
+	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP '/bin/bash /root/configure_st2client_libs.sh'
+else
+	ssh -t -t $SSH_OPTS  -i $APP_ROOT/docker/sshkey.pem  root@$CONT_IP '/bin/bash /root/init_postgres.sh'
+fi
+
+
+

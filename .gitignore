@@ -1,2 +1,4 @@
 docker/packages/
 packages/
+databases/*
+log/
