@@ -1,5 +1,23 @@
 #!/bin/bash
 
+ST2_DOWNLOAD_SERVER="https://downloads.stackstorm.net"
+ST2_VER="0.12.1"
+ST2_TYPE="debs"
+ST2_RELEASE=5
+
+#ST2_RELEASE=$(curl -sS -k -f "${ST2_DOWNLOAD_SERVER}/releases/st2/${ST2_VER}/${ST2_TYPE}/current/VERSION.txt")
+#EXIT_CODE=$?
+
+if [ ${EXIT_CODE} -ne 0 ]; then
+    echo "Invalid or unsupported version: ${ST2_VER}"
+    exit 1
+else
+    echo "CURRENT RELEASE FOR VERSION $ST2_VER: $ST2_RELEASE"
+fi
+
+
+
+
 source_dir="./packages" 
 dest_dir="./docker/packages"
 
@@ -10,7 +28,7 @@ dest_dir="./docker/packages"
 
 function join { local IFS="$1"; shift; echo "$*"; }
 
-CLEAN=true
+CLEAN=false
 
 if $CLEAN; then
 	read -p "You are about removing packages folders:  $source_dir and $dest_dir\nAre you sure?[y/N]"  -n 1 -r
@@ -74,14 +92,14 @@ unzip  $STANLEY_FOLDER.zip  && echo "$STANLEY_FOLDER downloaded" \
 
 
 
+MISTRAL_STABLE_BRANCH="st2-0.9.0"
 
-MISTRALCLIENT_URL=https://github.com/StackStorm/python-mistralclient/archive/st2-0.9.0.zip
+MISTRALCLIENT_URL=https://github.com/StackStorm/python-mistralclient/archive/$MISTRAL_STABLE_BRANCH.zip
 MISTRALCLIENT_GIT_URL=https://github.com/StackStorm/python-mistralclient.git
-MISTRALCLIENT_GIT_BRANCH=st2-0.9.0
-MISTRALCLIENT_FOLDER=python-mistralclient-$MISTRALCLIENT_GIT_BRANCH
+MISTRALCLIENT_FOLDER=python-mistralclient-$MISTRAL_STABLE_BRANCH
 
 [[ ! -d $MISTRALCLIENT_FOLDER  ]] && echo "cloning $MISTRALCLIENT_GIT_URL@$MISTRALCLIENT_GIT_BRANCH" && \
-git clone --depth 1 -b $MISTRALCLIENT_GIT_BRANCH  $MISTRALCLIENT_GIT_URL $MISTRALCLIENT_FOLDER &&\
+git clone --depth 1 -b $MISTRAL_STABLE_BRANCH  $MISTRALCLIENT_GIT_URL $MISTRALCLIENT_FOLDER &&\
    echo "$MISTRALCLIENT_GIT_URL cloned" \
 || echo "$MISTRALCLIENT_FOLDER exists"
 
@@ -106,21 +124,17 @@ git clone --depth 1 -b $LOGSHIPPER_GIT_BRANCH  $LOGSHIPPER_GIT_URL $LOGSHIPPERT_
 
 ST2_CLI_PACKAGE="st2client"
 ST2_PACKAGES="st2common st2reactor st2actions st2api st2auth st2debug"
-ST2_DOWNLOAD_SERVER="https://downloads.stackstorm.net"
-ST2_VER="0.12.1"
-ST2_BUILD="current"
-
 ST2_URL="$ST2_DOWNLOAD_SERVER/releases/st2/$ST2_VER/debs/current"
-ST2_RELEASE=5
-echo "ST2_URL:$ST2_URL"
+
+#echo "ST2_URL:$ST2_URL"
 
 
 download_st2_pkgs() {
-  echo "###########################################################################################"
-  echo "# Downloading ubuntu packages"
-  echo "ST2_PACKAGES: ${ST2_PACKAGES}"
-  echo "ST2_CLI_PACKAGE: ${ST2_CLI_PACKAGE}"
-  echo "AXEL_: ${ST2_CLI_PACKAGE}"
+  #echo "###########################################################################################"
+  #echo "# Downloading ubuntu packages"
+  #echo "ST2_PACKAGES: ${ST2_PACKAGES}"
+  #echo "ST2_CLI_PACKAGE: ${ST2_CLI_PACKAGE}"
+  #echo "AXEL_: ${ST2_CLI_PACKAGE}"
   PACKAGE_LIST=()
   #exit 10
   for pkg in `echo ${ST2_PACKAGES} ${ST2_CLI_PACKAGE}`
@@ -136,7 +150,7 @@ download_st2_pkgs() {
   done
   PACKAGE_LIST=$(join " " ${PACKAGE_LIST[@]})
   COUNT=`echo "PACKAGE_LIST:$PACKAGE_LIST" |  xargs  -n 1 echo | wc -l`
-  echo "FOUND $COUNT ST2 PACKAGES"
+  #echo "FOUND $COUNT ST2 PACKAGES"
   #echo "PACKAGE_LIST:$PACKAGE_LIST" |  xargs  -n 1    curl -sS -k -O 
 
   #echo "PACKAGE_LIST:$PACKAGE_LIST" |  xargs  -n 1 -I FILE curl -sS -k -O "FILE"
@@ -150,16 +164,63 @@ download_webui() {
   [[  -f webui-$ST2_VER.tar.gz  ]]	&& echo "webui-$ST2_VER.tar.gz  exists" || axel -n 3 -a  $WEBUI_URL
 }
 
+MISTRAL_GIT_URL=https://github.com/StackStorm/mistral.git
+download_mistral() {
+  [[  -d ./mistral  ]]  && echo "mistral folder  exists" || git clone $MISTRAL_GIT_URL
+}
+ST2MISTRAL_GIT_URL=https://github.com/StackStorm/st2mistral.git
+download_st2mistral() {
+  [[  -d ./st2mistral  ]]  && echo "st2mistral folder  exists" ||   git clone -b ${MISTRAL_STABLE_BRANCH} https://github.com/StackStorm/st2mistral.git
+}
 
 
 
-download_st2_pkgs
-download_webui
+
+PYCPARSER_VERSION=2.14
+PYCPASTER_URL=https://pypi.python.org/packages/source/p/pycparser/pycparser-$PYCPARSER_VERSION.tar.gz 
+download_pycparser() {
+  [[  -d ./pycparser  ]] && echo "pycparser folder exists"  && return 
+  [[ ! -f pycparser-$PYCPARSER_VERSION.tar.gz  ]]  &&  curl -O $PYCPASTER_URL
+  mkdir ./pycparser && tar xzvf pycparser-$PYCPARSER_VERSION.tar.gz -C ./pycparser --strip-components=1
+}
+
+
+
+
+YACL_VERSION=1.0.0.0rc2
+YACL_URL=https://pypi.python.org/packages/source/y/yaql/yaql-$YACL_VERSION.tar.gz
+download_yaql() {
+  [[  -d ./yacl  ]] && echo "yacl folder exists"  && return 
+  [[ ! -f yaql-$YACL_VERSION.tar.gz  ]]  &&  curl -O $YACL_URL
+  mkdir ./yacl && tar xzvf yaql-$YACL_VERSION.tar.gz  -C ./yacl --strip-components=1
+}
+
+
+CFFI_VERSION=1.1.2
+CFFI_URL=https://pypi.python.org/packages/source/c/cffi/cffi-$CFFI_VERSION.tar.gz
+
+download_cffi() {
+  [[  -d ./cffi  ]] && echo "cffi folder exists"  && return 
+  [[ ! -f cffi-$CFFI_VERSION.tar.gz  ]]  &&  curl -O $CFFI_URL
+  mkdir ./cffi && tar xzvf cffi-$CFFI_VERSION.tar.gz  -C ./cffi --strip-components=1
+}
+ 
 
  
+download_st2_pkgs
+download_webui
+download_mistral
+download_st2mistral
+download_pycparser
+download_yaql
+download_cffi
+
 #git clone --depth 1 -b st2-0.9.0  https://github.com/StackStorm/python-mistralclient.git python-mistralclient-st2-0.9.0
 cd ..
 
 cp -rf $source_dir/* $dest_dir && echo "$source_dir copied to $dest_dir"
+mv  $dest_dir/*.deb $dest_dir/debs && echo "deb packages moved to $dest_dir/debs"
+mv $dest_dir/debs/esl-erlang*  $dest_dir
+mv $dest_dir/debs/st2client*  $dest_dir
 #git clone --depth 1 -b stanley-patched  https://github.com/StackStorm/fabric.git
 #

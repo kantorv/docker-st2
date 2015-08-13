@@ -19,7 +19,7 @@ RUN dpkg-reconfigure --frontend noninteractive tzdata
 
 #remo
 RUN rm /etc/apt/sources.list
-ADD sources.il.list /etc/apt/sources.list
+ADD sources.local.list /etc/apt/sources.list
 #RUN   echo "192.115.211.70       ubuntu.mirror" >> /etc/hosts
 #192.115.211.70 ubuntu.mirror
 #echo "10.0.0.22       ubuntu.mirror"
@@ -37,10 +37,10 @@ RUN apt-get install -y \
 
 
 #RABBITMQ
-RUN echo "deb http://www.rabbitmq.com/debian/ testing main" >> /etc/apt/sources.list
+#RUN echo "deb http://www.rabbitmq.com/debian/ testing main" >> /etc/apt/sources.list
 ADD rabbitmq-signing-key-public.asc rabbitmq-signing-key-public.asc
 RUN apt-key add rabbitmq-signing-key-public.asc
-RUN apt-get update -y && apt-get install -y rabbitmq-server
+#RUN apt-get update -y && apt-get install -y rabbitmq-server
  
 RUN apt-get install -y   make python-virtualenv python-dev realpath mongodb mongodb-server gcc git libssl-dev libyaml-dev libffi-dev libxml2-dev libxslt1-dev postgresql postgresql-contrib libpq-dev
  
@@ -59,24 +59,60 @@ RUN pip install -r requirements2.txt
 RUN pip install -r requirements3.txt
 
 
-ADD requirements.txt  st2client.requirements.txt
+ADD st2client.requirements.txt  st2client.requirements.txt
 RUN pip install -r st2client.requirements.txt
 
-ADD packages /packages 
+
+#esl-erlang
+#st2client  
+#cryptography
+RUN apt-get install -y libwxbase2.8-0 libwxgtk2.8-0 \
+	python-dateutil python-jsonpath-rw  gdebi-core  \
+	build-essential libssl-dev libffi-dev python-dev
+
+ADD packages /packages
+RUN cd /packages/pycparser && python setup.py install
+RUN cd /packages/yacl && python setup.py install
+RUN cd /packages/cffi && python setup.py install
+
+ 
+RUN pip install cryptography psycopg2
+
+ADD mistral.requirements.txt  mistral.requirements.txt
+RUN pip install -r mistral.requirements.txt
 
 
+
+
+  
+
+
+
+RUN dpkg -i /packages/esl-erlang_18.0-1~ubuntu~trusty_amd64.deb
 RUN cd /packages  && ls -al && echo "custom packages installation directory"
 RUN cd /packages/fabric-stanley-patched && python setup.py install
 RUN cd /packages/python-mistralclient-st2-0.9.0 && python setup.py install
 RUN cd /packages/logshipper && python setup.py install
 
 
-RUN apt-get install -y  python-dateutil python-jsonpath-rw  gdebi-core
-RUN cd /packages &&  dpkg  -i *.deb
+
+RUN cd /packages/debs &&  dpkg  -i *.deb
 RUN gdebi --n /packages/st2client_0.12.1-5_amd64.deb
 
 ADD configure_st2client_libs.sh /configure_st2client_libs.sh
 RUN bash /configure_st2client_libs.sh  
+
+
+RUN cd /packages/mistral && \
+    python setup.py develop
+
+
+RUN mkdir -p /etc/mistral/actions && \
+	cd /etc/mistral/actions && \
+	cp -R /packages/st2mistral . && \
+	cd /etc/mistral/actions/st2mistral && \
+	python setup.py develop
+
 
 
 # rm -rf /var/lib/apt/lists/*
@@ -98,12 +134,11 @@ RUN rabbitmq-plugins enable rabbitmq_management && \
 
 
 
-ADD  st2_deploy.main.sh /root/st2_deploy.main.sh
-RUN bash -c 'chmod +x /root/st2_deploy.main.sh'
-RUN bash -c '/root/st2_deploy.main.sh stable'
+#ADD  st2_deploy.main.sh /root/st2_deploy.main.sh
+#RUN bash -c 'chmod +x /root/st2_deploy.main.sh'
+#RUN bash -c '/root/st2_deploy.main.sh stable'
 
 
-RUN apt-get install -y mongodb mongodb-server
 
 ADD configure_st2client_libs.sh /root/configure_st2client_libs.sh
 RUN bash -c 'chmod +x /root/configure_st2client_libs.sh'
